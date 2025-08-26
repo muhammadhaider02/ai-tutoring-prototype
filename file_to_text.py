@@ -7,7 +7,7 @@ from pydub import AudioSegment
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 load_dotenv()
-GLADIA_API_URL = "https://api.gladia.io/audio/text/audio-transcription/"
+GLADIA_API_URL = os.getenv("GLADIA_API_URL")
 GLADIA_API_KEY = os.getenv("GLADIA_API_KEY")
 
 def to_wav(src: Union[str, Path], dst: Union[str, Path] = None) -> str:

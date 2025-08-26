@@ -23,7 +23,8 @@ def to_wav(src: Union[str, Path], dst: Union[str, Path] = None) -> str:
         return src
 
     if dst is None:
-        dst = str(Path(src).with_suffix(".wav"))
+        filename = Path(src).name
+        dst = str(Path("input_files") / Path(filename).with_suffix(".wav"))
 
     if ext == ".mp3":
         audio = AudioSegment.from_mp3(src)
@@ -70,12 +71,16 @@ def transcribe_audio(filepath: str) -> str:
 def convert_and_transcribe(input_file: str) -> str:
     """
     Full pipeline: Convert input file to WAV, then get transcript.
-    Saves transcript to a .txt file with the same base name.
+    Saves transcript to a .txt file with the same base name in transcripts directory.
     """
+    if not os.path.dirname(input_file):
+        input_file = os.path.join("input_files", input_file)
+    
     wav_file = to_wav(input_file)
     transcript = transcribe_audio(wav_file)
 
-    txt_file = Path(input_file).with_suffix(".txt")
+    filename = Path(input_file).name
+    txt_file = Path("transcripts") / Path(filename).with_suffix(".txt")
 
     with open(txt_file, "w", encoding="utf-8") as f:
         f.write(transcript)
@@ -84,6 +89,6 @@ def convert_and_transcribe(input_file: str) -> str:
     return transcript
 
 if __name__ == "__main__":
-    file_path = "t4.wav"
+    file_path = "t2.mp3"
     transcript = convert_and_transcribe(file_path)
     print(transcript)

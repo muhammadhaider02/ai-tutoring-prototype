@@ -235,24 +235,30 @@ class MediaProcessor:
         filename_base = Path(src).stem
         
         if ext in {".mp4", ".mov", ".mkv", ".avi"}:
-            # For video files, extract audio and split
+            # For video files: extract full audio once, then chunk with pydub
             video = VideoFileClip(src)
             try:
-                for i, start_time in enumerate(range(0, int(duration), chunk_duration)):
-                    end_time = min(start_time + chunk_duration, duration)
-                    chunk_audio = video.subclip(start_time, end_time).audio
-                    
-                    temp_path = f"{filename_base}_chunk_{i}.wav"
-                    chunk_audio.write_audiofile(temp_path, logger=None)
-                    
-                    with open(temp_path, "rb") as f:
-                        chunk_bytes = f.read()
-                    
+                temp_full_wav = f"{filename_base}_full.wav"
+                # downsample keeps file smaller & upload faster; Gladia accepts 16k wav
+                video.audio.write_audiofile(temp_full_wav, fps=16000, logger=None)
+
+                audio = AudioSegment.from_wav(temp_full_wav)
+                for i, start_ms in enumerate(range(0, len(audio), chunk_duration * 1000)):
+                    end_ms = min(start_ms + chunk_duration * 1000, len(audio))
+                    chunk = audio[start_ms:end_ms]
+                    chunk_bytes = chunk.export(format="wav").read()
                     chunks.append((chunk_bytes, f"{filename_base}_chunk_{i}"))
-                    os.remove(temp_path)
-                    chunk_audio.close()
             finally:
-                video.close()
+                try:
+                    video.close()
+                except Exception:
+                    pass
+                # cleanup the temp full wav
+                if os.path.exists(temp_full_wav):
+                    try:
+                        os.remove(temp_full_wav)
+                    except Exception:
+                        pass
         else:
             # For audio files
             audio = AudioSegment.from_file(src)

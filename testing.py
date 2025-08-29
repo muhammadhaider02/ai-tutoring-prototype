@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage
 from openai import RateLimitError
 
 from fastapi import FastAPI
+from fastapi.responses import Response
 from pydantic import BaseModel
 import uvicorn
 import datetime
@@ -28,11 +29,12 @@ import json
 from langsmith import Client as LangSmithClient
 
 try:
-    from weasyprint import HTML
+    from playwright.sync_api import sync_playwright
     PDF_EXPORT_AVAILABLE = True
-except ImportError:
+except Exception as e:
     PDF_EXPORT_AVAILABLE = False
-    print("WeasyPrint not available. PDF export will return HTML instead.")
+    sync_playwright = None
+    print(f"Playwright PDF disabled; falling back to HTML. Reason: {e}")
 
 load_dotenv()
 
@@ -730,6 +732,20 @@ def validate_share_token(token: str) -> Dict[str, Any] | None:
         "metadata": metadata
     }
 
+def _html_to_pdf_bytes(html: str) -> bytes:
+    # Chromium prints the page; returns bytes if no path is given
+    with sync_playwright() as p:
+        browser = p.chromium.launch()  # headless by default
+        page = browser.new_page()
+        page.set_content(html, wait_until="load")
+        pdf_bytes = page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "16mm", "right": "14mm", "bottom": "16mm", "left": "14mm"},
+        )
+        browser.close()
+        return pdf_bytes
+    
 # Add new Pydantic models for share operations
 class CreateShareRequest(BaseModel):
     student_id: str
@@ -1145,18 +1161,16 @@ def export_as_pdf(student_id: str, course_id: str, session_id: str):
     # Try to convert to PDF if possible
     if PDF_EXPORT_AVAILABLE:
         try:
-            pdf = HTML(string=html_content).write_pdf()
-            from fastapi.responses import Response
+            pdf = _html_to_pdf_bytes(html_content)
             return Response(
                 content=pdf,
                 media_type="application/pdf",
                 headers={"Content-Disposition": f"inline; filename=session_{student_id}_{session_id}.pdf"}
             )
         except Exception as e:
-            print(f"PDF generation failed: {e}")
-            # Fall back to HTML
-    
-    # Return HTML if PDF conversion fails or is unavailable
+            print(f"Playwright PDF generation failed: {e}")
+
+    # fallback
     return {"html": html_content}
 
 # Add session metadata update endpoint and shared sessions endpoint

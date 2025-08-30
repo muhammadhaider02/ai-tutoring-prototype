@@ -15,6 +15,7 @@ from urllib.parse import quote
 
 import chromadb
 import requests
+from requests.adapters import HTTPAdapter
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -45,8 +46,8 @@ app = FastAPI()
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE")
 
-GLADIA_API_URL = os.getenv("GLADIA_API_URL")
-GLADIA_API_KEY = os.getenv("GLADIA_API_KEY")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+DEEPGRAM_API_URL = os.getenv("DEEPGRAM_API_URL")
 
 CHROMA_API_KEY = os.getenv("CHROMA_API_KEY")
 CHROMA_TENANT = os.getenv("CHROMA_TENANT")
@@ -56,6 +57,24 @@ LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
 LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
 
 SHARE_TOKEN_SECRET = os.getenv("SHARE_TOKEN_SECRET")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Models
+metadata_llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    api_key=OPENAI_API_KEY,
+    temperature=0.1
+)
+general_llm = ChatOpenAI(
+    model="gpt-4.1",
+    api_key=OPENAI_API_KEY,
+    temperature=0.2
+)
+embeddingModel = OpenAIEmbeddings(
+    model="text-embedding-3-large",
+    api_key=OPENAI_API_KEY,
+)
 
 # Chroma Client
 chroma_client = chromadb.CloudClient(
@@ -68,25 +87,6 @@ chroma_client = chromadb.CloudClient(
 ls_client = None
 if LANGSMITH_API_KEY:
     ls_client = LangSmithClient(api_key=LANGSMITH_API_KEY)
-
-# Models
-metadata_llm = ChatOpenAI(
-    model="openai/gpt-4o-mini",
-    api_key=GITHUB_API_KEY,
-    base_url=GITHUB_API_BASE,
-    temperature=0.0
-)
-general_llm = ChatOpenAI(
-    model="openai/gpt-4o-mini",
-    api_key=GITHUB_API_KEY,
-    base_url=GITHUB_API_BASE,
-    temperature=0.2
-)
-embeddingModel = OpenAIEmbeddings(
-    model="text-embedding-3-large",
-    api_key=GITHUB_API_KEY,
-    base_url=GITHUB_API_BASE
-)
 
 # State
 class ChatState(TypedDict):
@@ -135,12 +135,28 @@ def ls_end_run(run_id: str, outputs: dict = None, error: str = None):
 
 # Processor with long-audio chunking
 class MediaProcessor:
-    def __init__(self, gladia_url: str, gladia_key: str):
-        if not gladia_key:
-            raise ValueError("Missing GLADIA_API_KEY. Add it to your .env file.")
-        self.gladia_url = gladia_url
-        self.gladia_key = gladia_key
+    def __init__(self, api_url=None, api_key=None):
+        # Use parameters if provided, otherwise fall back to environment variables
+        self._dg_api_key = api_key or os.getenv("DEEPGRAM_API_KEY")
+        self._dg_url = api_url or os.getenv("DEEPGRAM_API_URL")
 
+        if not self._dg_api_key:
+            raise ValueError("Missing DEEPGRAM_API_KEY. Add it to your .env file.")
+
+        # how many parallel uploads you run
+        self._dg_workers = 8
+
+        # --- Reuse HTTP connections (keep-alive) ---
+        self._dg_session = requests.Session()
+        self._dg_session.headers.update({
+            "Authorization": f"Token {self._dg_api_key}",
+            "Content-Type": "audio/wav"
+        })
+
+        # widen the connection pool to match your parallel workers
+        adapter = HTTPAdapter(pool_connections=self._dg_workers, pool_maxsize=self._dg_workers)
+        self._dg_session.mount("https://", adapter)
+    
     def _duration_seconds(self, src: Union[str, Path]) -> float:
         """Get duration of audio/video file in seconds"""
         src = str(src)
@@ -199,35 +215,33 @@ class MediaProcessor:
         return str(x)
 
     def _upload_one(self, audio_bytes: bytes, filename: str) -> str:
-        headers = {"x-gladia-key": self.gladia_key}
-        files = {
-            "audio": (f"{filename}.wav", audio_bytes, "audio/wav"),
-        }
-        data = {
-            "toggle_diarization": "true",
-            "diarization_max_speakers": "2",
-            "output_format": "json",  # keep json; we normalize below
+        """Upload one audio chunk to Deepgram Nova-2 (batch ASR) using a keep-alive session."""
+        params = {
+            "model": "nova-2",
+            "smart_format": "true",
+            "diarize": "true",
+            "punctuate": "true"
         }
 
-        # simple retry on transient disconnects
         last_err = None
         for attempt in range(3):
             try:
-                resp = requests.post(self.gladia_url, headers=headers, files=files, data=data, timeout=600)
-                if resp.status_code != 200:
-                    raise Exception(f"Error {resp.status_code}: {resp.text}")
-                j = resp.json()
-                # normalize to plain text
-                pred = j.get("prediction", j)
-                return self._to_text(pred)
+                r = self._dg_session.post(self._dg_url, params=params, data=audio_bytes, timeout=600)
+                r.raise_for_status()
+                j = r.json()
+                # results.channels[0].alternatives[0].transcript
+                res = j.get("results", {})
+                ch = (res.get("channels") or [{}])[0]
+                alt = (ch.get("alternatives") or [{}])[0]
+                return (alt.get("transcript") or "").strip()
             except Exception as e:
                 last_err = e
                 time.sleep(1.5 * (attempt + 1))
         raise last_err
 
-    def _upload_chunks_parallel(self, chunks: list[tuple[bytes, str]], max_workers: int = 3) -> list[str]:
+    def _upload_chunks_parallel(self, chunks: list[tuple[bytes, str]]) -> list[str]:
         """Upload multiple audio chunks in parallel"""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._dg_workers) as executor:
             future_to_chunk = {
                 executor.submit(self._upload_one, audio_bytes, filename): i
                 for i, (audio_bytes, filename) in enumerate(chunks)
@@ -257,7 +271,7 @@ class MediaProcessor:
 
     def _transcribe_long_audio(self, input_file: str, duration: float) -> str:
         """Handle long audio by splitting into ~11 minute chunks"""
-        chunk_duration = 660  # 11 minutes
+        chunk_duration = 480  # 8 minutes
         chunks = []
         
         src = str(input_file)
@@ -300,8 +314,8 @@ class MediaProcessor:
         
         print(f"Splitting {duration:.1f}s audio into {len(chunks)} chunks")
         
-        # Upload chunks in parallel (3 at a time)
-        transcripts = self._upload_chunks_parallel(chunks, max_workers=3)
+        # Upload chunks in parallel
+        transcripts = self._upload_chunks_parallel(chunks)
 
         # Normalize again (in case any worker returned non-str)
         clean = [t if isinstance(t, str) else self._to_text(t) for t in transcripts]
@@ -319,6 +333,20 @@ async def retry_with_backoff(coro, max_retries=5, base_delay=2, max_delay=30):
             await asyncio.sleep(sleep_time)
     raise RuntimeError("Max retries exceeded.")
 
+# New more flexible retry helper
+async def _retry_with_backoff_async(fn, *, tries=3, base=1.5, max_delay=8, exceptions=(Exception,)):
+    """Retry an async callable with exponential backoff on transient errors."""
+    last = None
+    for i in range(tries):
+        try:
+            return await fn()
+        except exceptions as e:
+            last = e
+            delay = min(max_delay, base * (2 ** i))
+            print(f"[retry] attempt {i+1}/{tries} failed: {e!r}; sleeping {delay:.1f}s")
+            await asyncio.sleep(delay)
+    raise last
+
 # Helper to truncate text to stay within Chroma's document size limits
 def _truncate_utf8(text: str, max_bytes: int = 15000) -> str:
     if not text:
@@ -328,6 +356,22 @@ def _truncate_utf8(text: str, max_bytes: int = 15000) -> str:
         return text
     return b[:max_bytes].decode("utf-8", errors="ignore") + " …[truncated]"
 
+def _norm_topic(t: str) -> str:
+    """Normalize topic string (basic cleanup, no collapsing Algebra/Geometry)"""
+    if not t:
+        return "Unknown"
+    return t.strip().title()
+
+def _unique_order(seq):
+    """Remove duplicates while preserving order"""
+    seen = set()
+    out = []
+    for x in seq:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
 # Metadata (batched)
 async def get_metadata_batch(chunks: list[Document], file_name: str, start_ix: int) -> list[dict]:
     parts = []
@@ -335,14 +379,19 @@ async def get_metadata_batch(chunks: list[Document], file_name: str, start_ix: i
         ix = start_ix + i
         parts.append(f"[{ix}]\n{d.page_content}\n")
     joined = "\n---\n".join(parts)
-    prompt = f"""You are labeling transcript chunks for indexing.
+    prompt = f"""You are an assistant that labels transcript chunks with specific, meaningful topics.
 
 Rules:
-- ALWAYS provide a Topic (1–3 words).
-- If unsure, GUESS the most likely Topic from the text.
-- NEVER leave Topic empty.
-- Provide 2–5 Subtopics, comma-separated.
-- Format: <ix>|Topic=<topic>|Subtopics=<list>
+- For each chunk, provide a Topic that is **concise but informative** (max 6 words).
+- Avoid generic labels like "General Discussion", "Conversation", "Chat".
+- If the chunk is instructional/academic:
+  - Focus on the **main concept** being taught or discussed
+  - e.g. "Quadratic Functions – Vertex Form", "Punctuation – Colons vs M-dash"
+- If the chunk is off-topic small talk:
+  - Do NOT write "Small Talk".
+  - Instead, capture the **actual subject of the chatter** (e.g., "Sports Talk", "Weekend Plans", "Weather", "Jokes").
+- Also provide 2–5 Subtopics as comma-separated terms.
+- Format your response EXACTLY as: <ix>|Topic=<topic>|Subtopics=<list>
 
 Chunks:
 {joined}
@@ -441,13 +490,26 @@ def run_evaluators(state: ChatState, metas: list[dict]):
                         prev_topics = [all_sessions["metadatas"][prev_idx].get("topic", "")]
                         print(f"Found previous session from {session_dates[0][0]}")
 
-        # Optimization for long sessions: sample every 5th chunk for evaluators
-        if state["duration_s"] > 1800:  # 30 minutes
-            sampled_metas = metas[::5]  # Every 5th chunk
+        # Build raw topic lists (same as before)
+        if state["duration_s"] > 1800:
+            sampled_metas = metas[::5]
             print(f"Long session detected ({state['duration_s']:.1f}s), sampling {len(sampled_metas)} of {len(metas)} chunks for evaluation")
-            curr_topics = [m.get("topic") for m in sampled_metas]
+            curr_raw = [m.get("topic") for m in sampled_metas]
         else:
-            curr_topics = [m.get("topic") for m in metas]
+            curr_raw = [m.get("topic") for m in metas]
+
+        # Normalize
+        prev_norm = [_norm_topic(t) for t in prev_topics if t]
+        curr_norm = [_norm_topic(t) for t in curr_raw if t]
+
+        # De-duplicate while keeping order
+        prev_unique = _unique_order(prev_norm)
+        curr_unique = _unique_order(curr_norm)
+
+        # (Optional) counts, so you can see distribution without repeats
+        from collections import Counter
+        prev_counts = dict(Counter(prev_norm))
+        curr_counts = dict(Counter(curr_norm))
 
         transcript = state['transcript'] or ""
         if len(transcript) > 6000:
@@ -457,13 +519,20 @@ def run_evaluators(state: ChatState, metas: list[dict]):
 
         prompt = f"""
 You are an evaluator for a tutoring session transcript.
+
+Your goal: help the tutor understand **how the student is learning**.
+
 Return STRICT JSON with exactly these keys:
-- "complexity": integer 1–5
+- "complexity": integer 1–5 (difficulty of material)
+- "concept_mastery": list of objects, each with:
+    {{"concept": "…", "status": "understood | partial | not understood"}}
 - "misconceptions": list of short recurring errors
-- "engagement": object with keys:
-    - "speaking_ratio": "teacher" | "student" | "balanced"
-    - "question_density": "low" | "medium" | "high"
-    - "turn_taking": "balanced" | "unbalanced"
+- "progress": string summarizing how the student improved during the session
+- "engagement": object with:
+    {{"speaking_ratio": "teacher | student | balanced",
+      "question_density": "low | medium | high",
+      "turn_taking": "balanced | unbalanced"}}
+- "next_focus": list of 2–3 things the tutor should address next session
 
 Transcript:
 {transcript_for_eval}
@@ -481,9 +550,17 @@ Transcript:
             print(f"Evaluation LLM error: {e}")
             llm_result = '{"complexity": "N/A", "misconceptions": [], "engagement": {}}'
 
+        # Use the cleaned versions in insights
         insights = {
-            "topic_drift": {"previous": prev_topics, "current": curr_topics},
-            "llm_eval": llm_result
+            "topic_drift": {
+                "previous": prev_unique,
+                "current":  curr_unique,
+                "counts": {
+                    "previous": prev_counts,
+                    "current":  curr_counts,
+                }
+            },
+            "llm_eval": llm_result  # keep your existing eval result
         }
 
         insights_col.upsert(
@@ -518,53 +595,146 @@ def _run_evaluators_background(state: ChatState, metas: list[dict]):
 
 # --------- Step 6: Summary + Quiz ---------
 def run_summary_and_quiz(state: ChatState):
-    session_doc_id = _doc_id(state["teacher_id"], state["student_id"], state["course_id"], state["session_id"])
-    summaries_col = chroma_client.get_or_create_collection("session_summaries")
-    quizzes_col = chroma_client.get_or_create_collection("session_quizzes")
+    run_id = ls_start_run("summary_quiz", {"session_id": state["session_id"]})
+    error_msg, outputs = None, None
+    
+    try:
+        session_doc_id = _doc_id(state["teacher_id"], state["student_id"], state["course_id"], state["session_id"])
+        summaries_col = chroma_client.get_or_create_collection("session_summaries")
+        quizzes_col = chroma_client.get_or_create_collection("session_quizzes")
 
-    transcript = state['transcript'] or ""
-    if len(transcript) > 8000:
-        head = transcript[:4000]
-        tail = transcript[-3000:]
-        transcript_for_gen = head + "\n...\n" + tail
-    else:
-        transcript_for_gen = transcript
+        transcript = state['transcript'] or ""
+        
+        # Prepare truncated transcript for generation
+        if len(transcript) > 8000:
+            head = transcript[:4000]
+            tail = transcript[-3000:]
+            transcript_for_gen = head + "\n...\n" + tail
+        else:
+            transcript_for_gen = transcript
 
-    prompt = f"""
-You are creating tutor-facing content from a tutoring session transcript.
+        # --- Summary generation with retries and fallback ---
+        summary_prompt = f"""
+You are creating a **tutor-facing session summary** from a tutoring session transcript.
 
-Return VALID JSON with exactly these keys:
-- "summary": a bullet list of 5–8 main points
-- "quiz": a list of 5 items; each item is an object with:
-    - "type": "mcq" or "short"
-    - "question": string
-    - if type == "mcq": include "options" (list of 4 strings) and "answer"
-    - if type == "short": include "answer"
+Goals:
+- Help the tutor quickly recall what was taught.
+- Emphasize the **main concepts explained**, **skills practiced**, and any **student difficulties**.
+- Provide insights the tutor can use to plan the **next session**.
+
+Rules:
+- Return a **bullet list** of 5–8 points.
+- Each bullet should be **specific and actionable**, not generic.
+- Highlight:
+  • Key topics covered (e.g., "Quadratic Functions – Vertex Form")
+  • Misconceptions or errors the student made
+  • Strategies or examples the tutor used
+  • Progress indicators (what the student did well, where they improved)
+  • Suggested next steps or review needs
+- Avoid filler like "general discussion" or "they talked".
+- Write in **professional tutor notes style**.
 
 Transcript:
 {transcript_for_gen}
 """
-    # Add retry with backoff for LLM call
-    async def get_summary_quiz():
-        async def call_llm():
-            return await general_llm.ainvoke([HumanMessage(content=prompt)])
-        resp = await retry_with_backoff(call_llm)
-        return resp.content.strip()
-    
-    try:
-        raw = asyncio.run(get_summary_quiz())
-        if raw.startswith("```"):
-            raw = raw.strip("`")
-            if raw.lower().startswith("json"):
-                raw = raw[4:].strip()
-        data = json.loads(raw)
+        
+        async def call_summary_primary():
+            return await general_llm.ainvoke([HumanMessage(content=summary_prompt)])
+            
+        async def call_summary_fallback():
+            fallback_llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY, temperature=0.1)
+            return await fallback_llm.ainvoke([HumanMessage(content=summary_prompt)])
+            
+        async def get_summary():
+            try:
+                return await asyncio.wait_for(
+                    _retry_with_backoff_async(call_summary_primary, tries=3),
+                    timeout=60
+                )
+            except Exception as e:
+                print(f"[summary] primary failed, trying fallback: {e!r}")
+                return await asyncio.wait_for(
+                    _retry_with_backoff_async(call_summary_fallback, tries=3),
+                    timeout=60
+                )
+        
+        # --- Quiz generation with retries and fallback ---
+        quiz_prompt = f"""
+You are a tutor assistant. You will generate a **quiz** from the session transcript below.
 
-        summary_bullets = data.get("summary", [])
-        quiz_obj = data.get("quiz", [])
+Your goal:
+- Check whether the student understood the **concepts** (not just recall words).
+- Create **application-based multiple-choice questions (MCQs)** that make the student think.
+- Focus on main ideas, principles, methods, and reasoning steps.
 
-        summary_text = "\n".join(summary_bullets) if isinstance(summary_bullets, list) else str(summary_bullets)
-        quiz_str = json.dumps(quiz_obj, ensure_ascii=False)
+Rules:
+- Avoid trivial recall (names, tools, dates).
+- Each question must have **4 answer options (A–D)**.
+- Only **one option** should be correct.
+- Provide exactly **5 questions**. 
+- In the "correct_answer", include both the letter **and** the full answer text (e.g., "B) The axis of symmetry").
+- Output must be STRICT JSON with this shape:
+  {{
+    "quiz": [
+      {{
+        "question": "…",
+        "options": ["A) …", "B) …", "C) …", "D) …"],
+        "correct_answer": "B) …"
+      }}
+    ]
+  }}
 
+Transcript:
+{transcript_for_gen}
+"""
+        async def call_quiz_primary():
+            return await general_llm.ainvoke([HumanMessage(content=quiz_prompt)])
+            
+        async def call_quiz_fallback():
+            fallback_llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY, temperature=0.1)
+            return await fallback_llm.ainvoke([HumanMessage(content=quiz_prompt)])
+            
+        async def get_quiz():
+            try:
+                return await asyncio.wait_for(
+                    _retry_with_backoff_async(call_quiz_primary, tries=3),
+                    timeout=90
+                )
+            except Exception as e:
+                print(f"[quiz] primary failed, trying fallback: {e!r}")
+                return await asyncio.wait_for(
+                    _retry_with_backoff_async(call_quiz_fallback, tries=3),
+                    timeout=90
+                )
+                
+        # Process summary
+        try:
+            summary_resp = asyncio.run(get_summary())
+            summary_raw = summary_resp.content.strip()
+            summary_lines = summary_raw.strip().split("\n")
+            summary_bullets = [line.strip("• ").strip() for line in summary_lines if line.strip()]
+            summary_text = "\n".join(summary_bullets)
+        except Exception as e:
+            print(f"Summary generation error: {e}")
+            summary_text = "Unable to generate summary due to a technical issue."
+            
+        # Process quiz
+        try:
+            quiz_resp = asyncio.run(get_quiz())
+            quiz_raw = quiz_resp.content.strip()
+            if quiz_raw.startswith("```"):
+                quiz_raw = quiz_raw.strip("`")
+                if quiz_raw.lower().startswith("json"):
+                    quiz_raw = quiz_raw[4:].strip()
+            
+            quiz_data = json.loads(quiz_raw)
+            quiz_str = json.dumps(quiz_data, ensure_ascii=False)
+        except Exception as e:
+            print(f"Quiz generation error: {e}")
+            # Provide minimal valid quiz JSON on error
+            quiz_str = json.dumps({"quiz": []}, ensure_ascii=False)
+
+        # Store summary
         summaries_col.upsert(
             ids=[session_doc_id],
             documents=[summary_text],
@@ -580,6 +750,8 @@ Transcript:
                 "is_edited": False
             }],
         )
+        
+        # Store quiz
         quizzes_col.upsert(
             ids=[session_doc_id],
             documents=[quiz_str],
@@ -595,8 +767,15 @@ Transcript:
                 "is_edited": False
             }],
         )
+        
+        outputs = {"summary_generated": True, "quiz_generated": True}
+        print(f"Summary and Quiz stored for session {state['session_id']}")
+        
     except Exception as e:
-        print(f"Summary/Quiz generation error: {e}")
+        error_msg = str(e)
+        print(f"Summary/Quiz processing error: {e}")
+    finally:
+        ls_end_run(run_id, outputs=outputs, error=error_msg)
 
 def _run_summary_quiz_background(state: ChatState):
     try:
@@ -1655,7 +1834,7 @@ def edit_session_quiz(
     metadata = res["metadatas"][0].copy()
     metadata["version"] = metadata.get("version", 1) + 1
     metadata["is_edited"] = True
-    metadata["edited_at"] = datetime.datetime.now().isoformat()  # Fixed datetime usage
+    metadata["edited_at"] = datetime.datetime.now().isoformat()
     
     quiz_str = json.dumps(req.questions, ensure_ascii=False)
     quizzes_col.upsert(
@@ -1690,7 +1869,7 @@ def edit_session_feedback(
     metadata = res["metadatas"][0].copy()
     metadata["version"] = metadata.get("version", 1) + 1
     metadata["is_edited"] = True
-    metadata["edited_at"] = datetime.datetime.now().isoformat()  # Fixed datetime usage
+    metadata["edited_at"] = datetime.now().isoformat()
     
     insights_str = json.dumps(req.insights, ensure_ascii=False)
     insights_col.upsert(
@@ -1704,7 +1883,7 @@ def edit_session_feedback(
 # Run
 if __name__ == "__main__":
     file_path = "Recording 1.mp4"
-    processor = MediaProcessor(GLADIA_API_URL, GLADIA_API_KEY)
+    processor = MediaProcessor(api_url=DEEPGRAM_API_URL, api_key=DEEPGRAM_API_KEY)
     
     duration = processor._duration_seconds(file_path)
     

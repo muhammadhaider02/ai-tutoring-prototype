@@ -25,7 +25,7 @@ function StudentQuizPage() {
   const fixedCourseName = "Advanced Mathematics";
 
   // State for quiz data and loading
-  const [quizData, setQuizData] = useState(null);
+  const [quizArr, setQuizArr] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -40,8 +40,16 @@ function StudentQuizPage() {
           courseId: fixedCourseName,
           sessionId
         });
-        if (result.quiz && result.quiz.quiz && result.quiz.quiz.length > 0) {
-          setQuizData(result.quiz);
+        // Accept both {quiz: [...]} and [...] as quiz data
+        let quizRaw = result.quiz;
+        let quizList = [];
+        if (Array.isArray(quizRaw)) {
+          quizList = quizRaw;
+        } else if (quizRaw && Array.isArray(quizRaw.quiz)) {
+          quizList = quizRaw.quiz;
+        }
+        if (quizList.length > 0) {
+          setQuizArr(quizList);
         } else {
           setError('No quiz data available for this session.');
         }
@@ -119,9 +127,9 @@ function StudentQuizPage() {
             </div>
           )}
 
-          {!loading && !error && quizData && quizData.quiz && (
+          {!loading && !error && quizArr && quizArr.length > 0 && (
             <div className="quiz-container">
-              {quizData.quiz.map((question, index) => (
+              {quizArr.map((question, index) => (
                 <div className="quiz-question" key={index}>
                   <h4>Question {index + 1}:</h4>
                   <p>{question.question}</p>
@@ -145,7 +153,7 @@ function StudentQuizPage() {
             </div>
           )}
 
-          {!loading && !error && quizData && quizData.quiz && quizData.quiz.length > 0 && (
+          {!loading && !error && quizArr && quizArr.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
               <button 
                 className="action-button"

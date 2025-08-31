@@ -11,9 +11,10 @@ import {
   Brain, 
   BarChart2, 
   Tag,
-  Loader
+  Loader,
+  X
 } from 'lucide-react';
-import { getSessionResult } from '../lib/services';
+import { getSessionResult, editSummary, editFeedback, editQuiz } from '../lib/services';
 
 function AISummaryPage() {
   const navigate = useNavigate();
@@ -40,6 +41,13 @@ function AISummaryPage() {
     excellence: [],
     quickSummary: []
   });
+
+  // Modal state for editing
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTab, setEditTab] = useState('summary'); // 'summary', 'progress', 'topics'
+  const [editValue, setEditValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   // Fetch summary data when component mounts
   useEffect(() => {
@@ -189,6 +197,82 @@ function AISummaryPage() {
     navigate(-1);
   };
 
+  // When opening modal, load the current value for the selected tab
+  useEffect(() => {
+    if (!showEditModal) return;
+    if (editTab === 'summary') {
+      setEditValue(summaryData || '');
+    } else if (editTab === 'progress') {
+      // Progress evaluation: instructor comments (progress field in llm_eval)
+      if (feedbackData && feedbackData.llm_eval) {
+        try {
+          const evalData = JSON.parse(feedbackData.llm_eval);
+          setEditValue(evalData.progress || '');
+        } catch {
+          setEditValue('');
+        }
+      } else {
+        setEditValue('');
+      }
+    } else if (editTab === 'topics') {
+      // Extracted topics: topic_drift.current (array)
+      if (feedbackData && feedbackData.topic_drift && Array.isArray(feedbackData.topic_drift.current)) {
+        setEditValue(feedbackData.topic_drift.current.join('\n'));
+      } else {
+        setEditValue('');
+      }
+    }
+  // eslint-disable-next-line
+  }, [showEditModal, editTab, summaryData, feedbackData]);
+
+  // Save handler for Done button
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    setEditError(null);
+    try {
+      if (editTab === 'summary') {
+        await editSummary({
+          studentId: studentId,
+          courseId: courseName,
+          sessionId: sessionId,
+          content: editValue
+        });
+      } else if (editTab === 'progress') {
+        // Update only the progress field in llm_eval
+        let llm_eval = {};
+        if (feedbackData && feedbackData.llm_eval) {
+          try {
+            llm_eval = JSON.parse(feedbackData.llm_eval);
+          } catch {}
+        }
+        llm_eval.progress = editValue;
+        await editFeedback({
+          studentId: studentId,
+          courseId: courseName,
+          sessionId: sessionId,
+          insights: { llm_eval: JSON.stringify(llm_eval), topic_drift: feedbackData?.topic_drift }
+        });
+      } else if (editTab === 'topics') {
+        // Update only the topic_drift.current array
+        let topic_drift = feedbackData?.topic_drift || {};
+        topic_drift.current = editValue.split('\n').map(s => s.trim()).filter(Boolean);
+        await editFeedback({
+          studentId: studentId,
+          courseId: courseName,
+          sessionId: sessionId,
+          insights: { llm_eval: feedbackData?.llm_eval, topic_drift }
+        });
+      }
+      setShowEditModal(false);
+      // Optionally, reload data after save
+      window.location.reload();
+    } catch (e) {
+      setEditError('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="dashboard-page">
       {/* Top Navigation Bar */}
@@ -263,6 +347,109 @@ function AISummaryPage() {
         </div>
       </div>
 
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 600, minHeight: 340 }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Edit2 size={20} style={{ color: '#3B82F6' }} />
+                <h2 style={{ margin: 0, fontSize: 18 }}>Edit AI Outputs</h2>
+              </div>
+              <button className="close-button" onClick={() => setShowEditModal(false)}>
+                <X size={22} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', minHeight: 220 }}>
+              {/* Vertical Nav Bar */}
+              <div className="edit-nav" style={{ minWidth: 160, borderRight: '1px solid var(--card-border)', padding: '1.5rem 0.5rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <button
+                  className={`edit-nav-btn${editTab === 'summary' ? ' active' : ''}`}
+                  onClick={() => setEditTab('summary')}
+                >
+                  <FileText size={16} style={{ marginRight: 8 }} />
+                  Summary
+                </button>
+                <button
+                  className={`edit-nav-btn${editTab === 'progress' ? ' active' : ''}`}
+                  onClick={() => setEditTab('progress')}
+                >
+                  <BarChart2 size={16} style={{ marginRight: 8 }} />
+                  Progress Evaluation
+                </button>
+                <button
+                  className={`edit-nav-btn${editTab === 'topics' ? ' active' : ''}`}
+                  onClick={() => setEditTab('topics')}
+                >
+                  <Tag size={16} style={{ marginRight: 8 }} />
+                  Extracted Topics
+                </button>
+              </div>
+              {/* Edit Area */}
+              <div style={{ flex: 1, padding: '1.5rem' }}>
+                {editTab === 'summary' && (
+                  <>
+                    <h3>Edit Summary</h3>
+                    <textarea
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      rows={10}
+                      style={{ width: '100%', fontSize: '1rem', borderRadius: 8, padding: 10, border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text)' }}
+                    />
+                  </>
+                )}
+                {editTab === 'progress' && (
+                  <>
+                    <h3>Edit Progress Evaluation</h3>
+                    <textarea
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      rows={8}
+                      style={{ width: '100%', fontSize: '1rem', borderRadius: 8, padding: 10, border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text)' }}
+                    />
+                  </>
+                )}
+                {editTab === 'topics' && (
+                  <>
+                    <h3>Edit Extracted Topics</h3>
+                    <textarea
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      rows={8}
+                      style={{ width: '100%', fontSize: '1rem', borderRadius: 8, padding: 10, border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text)' }}
+                    />
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6 }}>
+                      Enter one topic per line.
+                    </div>
+                  </>
+                )}
+                {editError && (
+                  <div style={{ color: '#ef4444', marginTop: 10 }}>{editError}</div>
+                )}
+                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                  <button
+                    className="action-button"
+                    style={{ background: 'var(--card)', color: 'var(--text)', border: '1px solid var(--card-border)' }}
+                    onClick={() => setShowEditModal(false)}
+                    disabled={saving}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="action-button"
+                    style={{ background: 'rgb(59, 130, 246)', color: 'white' }}
+                    onClick={handleSaveEdit}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Done'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Content */}
       <div className="dashboard-content">
         {/* Session Metadata Card */}
@@ -291,7 +478,7 @@ function AISummaryPage() {
               e.currentTarget.style.transform = 'none';
               e.currentTarget.style.boxShadow = 'none';
             }}
-            onClick={() => alert('Edit AI Outputs clicked')}
+            onClick={() => setShowEditModal(true)}
           >
             <Edit2 size={16} />
             <span>Edit AI Outputs</span>
@@ -525,6 +712,89 @@ function AISummaryPage() {
           justify-content: center;
           background-color: rgba(59, 130, 246, 0.15);
           color: #3b82f6;
+        }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(3px);
+        }
+        .modal-container {
+          background: var(--card);
+          border: 1px solid var(--card-border);
+          border-radius: 12px;
+          width: 600px;
+          max-width: 95vw;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+          animation: modal-appear 0.3s ease-out;
+          backdrop-filter: blur(12px);
+        }
+        @keyframes modal-appear {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid var(--card-border);
+        }
+        .modal-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .close-button {
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: var(--muted);
+          height: 32px;
+          width: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.2s;
+        }
+        .close-button:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+        .edit-nav {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .edit-nav-btn {
+          background: none;
+          border: none;
+          color: var(--muted);
+          font-size: 1rem;
+          font-weight: 500;
+          padding: 8px 0;
+          text-align: left;
+          cursor: pointer;
+          border-radius: 6px;
+          transition: background 0.2s, color 0.2s;
+          display: flex;
+          align-items: center;
+        }
+        .edit-nav-btn.active,
+        .edit-nav-btn:hover {
+          background: rgba(59,130,246,0.12);
+          color: var(--blue);
         }
 
         @media (max-width: 768px) {

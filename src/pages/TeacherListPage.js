@@ -24,7 +24,7 @@ function TeacherListPage() {
 
           <h2
             className="select-role-text"
-            style={{ marginTop: '0.2rem', marginBottom: '0.5rem' }}
+            style={{ marginTop: '0.05rem', marginBottom: '0.5rem' }}
           >
             Select your role to continue
           </h2>
@@ -41,9 +41,13 @@ function TeacherListPage() {
 
         {/* Updated grid layout for teacher cards */}
         <div className="students-grid">
-          <div className="student-card">
+          <div
+            className="student-card"
+            onClick={() => navigate('/teacher-dashboard/jaka')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="student-initial">J</div>
-            <p className="student-name">John Davis</p>
+            <p className="student-name">Jaka Bavdek</p>
           </div>
 
           <div className="student-card">

@@ -18,7 +18,7 @@ import requests
 from requests.adapters import HTTPAdapter
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -1946,26 +1946,234 @@ def edit_session_feedback(
     
     return {"ok": True, "version": metadata["version"]}
     
-# Run
-if __name__ == "__main__":
-    file_path = "Recording 3.mp4"
-    processor = MediaProcessor(api_url=DEEPGRAM_API_URL, api_key=DEEPGRAM_API_KEY)
-    
-    duration = processor._duration_seconds(file_path)
-    
-    transcript = processor.transcribe(file_path)
-    state: ChatState = {
-        "messages": [],
-        "file_path": file_path,
-        "transcript": transcript,
-        "retrieved_context": None,
-        "teacher_id": "Prof. Jaka Bavdek",
-        "student_id": "Amna Ahmad",
-        "course_id": "Advanced Mathematics",
-        "session_id": "3",
-        "session_date": datetime.now().isoformat(),
-        "duration_s": duration
-    }
-    state = store_in_chroma(state)
+# Temporary storage for processing status
+processing_status = {}
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    teacher_id: str = Form(...),
+    student_id: str = Form(...),
+    course_id: str = Form(...),
+    session_id: str = Form(...),
+    session_date: str = Form(...)
+):
+    """Upload and begin processing a session video/audio file"""
+    try:
+        # Create a unique file name
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        upload_dir = "uploads"
+        
+        # Create directory if it doesn't exist
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save the file
+        file_path = os.path.join(upload_dir, unique_filename)
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+        
+        # Initialize processing status
+        doc_id = f"{teacher_id}:{student_id}:{course_id}:{session_id}"
+        processing_status[doc_id] = {
+            "transcription": False,
+            "storing": False,
+            "summary": False,
+            "quiz": False,
+            "evaluation": False,
+        }
+        
+        # Start processing in a background task
+        threading.Thread(
+            target=process_file,
+            args=(file_path, teacher_id, student_id, course_id, session_id, session_date),
+            daemon=True
+        ).start()
+        
+        return {"success": True, "file_path": file_path, "doc_id": doc_id}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+def process_file(
+    file_path: str,
+    teacher_id: str,
+    student_id: str,
+    course_id: str,
+    session_id: str,
+    session_date: str
+):
+    """Process an uploaded file (runs in background thread)"""
+    doc_id = f"{teacher_id}:{student_id}:{course_id}:{session_id}"
+    try:
+        # Create media processor
+        processor = MediaProcessor(api_url=DEEPGRAM_API_URL, api_key=DEEPGRAM_API_KEY)
+        
+        # Get file duration
+        duration = processor._duration_seconds(file_path)
+        
+        # Transcribe the file
+        transcript = processor.transcribe(file_path)
+        processing_status[doc_id]["transcription"] = True
+        
+        # Create state object
+        state: ChatState = {
+            "messages": [],
+            "file_path": file_path,
+            "transcript": transcript,
+            "retrieved_context": None,
+            "teacher_id": teacher_id,
+            "student_id": student_id,
+            "course_id": course_id,
+            "session_id": session_id,
+            "session_date": session_date,
+            "duration_s": duration
+        }
+        
+        # Store in Chroma
+        state = store_in_chroma(state)
+        processing_status[doc_id]["storing"] = True
+        
+        # Get metadata for evaluators
+        sessions_col = chroma_client.get_or_create_collection("sessions")
+        metadata_res = sessions_col.get(where={"$and": [
+            {"teacher_id": teacher_id},
+            {"student_id": student_id},
+            {"course_id": course_id},
+            {"session_id": session_id}
+        ]})
+        
+        if metadata_res and metadata_res.get("metadatas"):
+            metas = metadata_res["metadatas"]
+            
+            # Update processing status for summary and quiz
+            processing_status[doc_id]["summary"] = True
+            processing_status[doc_id]["quiz"] = True
+            processing_status[doc_id]["evaluation"] = True
+        
+        # Clean up the temp file after processing
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Failed to remove temp file: {e}")
+            
+    except Exception as e:
+        print(f"Processing error: {e}")
+        # Update status to indicate error
+        processing_status[doc_id]["error"] = str(e)
+
+@app.get("/processing/status")
+async def get_processing_status(
+    teacher_id: str,
+    student_id: str,
+    course_id: str,
+    session_id: str
+):
+    """Get the processing status for a session"""
+    doc_id = f"{teacher_id}:{student_id}:{course_id}:{session_id}"
+    
+    if doc_id not in processing_status:
+        raise HTTPException(status_code=404, detail="No processing found for this session")
+    
+    return processing_status[doc_id]
+
+@app.get("/sessions/result")
+async def get_session_result(
+    teacher_id: str,
+    student_id: str,
+    course_id: str,
+    session_id: str
+):
+    """Get the processed results for a session"""
+    try:
+        result = {}
+        
+        # Get summary
+        summaries_col = chroma_client.get_or_create_collection("session_summaries")
+        summary_res = summaries_col.get(where={"$and": [
+            {"teacher_id": teacher_id},
+            {"student_id": student_id},
+            {"course_id": course_id},
+            {"session_id": session_id}
+        ]})
+        
+        if summary_res and summary_res.get("documents"):
+            result["summary"] = summary_res["documents"][0]
+        
+        # Get quiz
+        quizzes_col = chroma_client.get_or_create_collection("session_quizzes")
+        quiz_res = quizzes_col.get(where={"$and": [
+            {"teacher_id": teacher_id},
+            {"student_id": student_id},
+            {"course_id": course_id},
+            {"session_id": session_id}
+        ]})
+        
+        if quiz_res and quiz_res.get("documents"):
+            try:
+                result["quiz"] = json.loads(quiz_res["documents"][0])
+            except json.JSONDecodeError:
+                result["quiz"] = {"quiz": []}
+        
+        # Get feedback
+        insights_col = chroma_client.get_or_create_collection("session_insights")
+        feedback_res = insights_col.get(where={"$and": [
+            {"teacher_id": teacher_id},
+            {"student_id": student_id},
+            {"course_id": course_id},
+            {"session_id": session_id}
+        ]})
+        
+        if feedback_res and feedback_res.get("documents"):
+            try:
+                result["feedback"] = json.loads(feedback_res["documents"][0])
+            except json.JSONDecodeError:
+                result["feedback"] = {}
+        
+        return result
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving session result: {str(e)}")
+
+@app.get("/sessions/list")
+async def get_sessions_list(
+    teacher_id: str,
+    student_id: str,
+    course_id: str
+):
+    """Get all sessions for a teacher/student/course combination"""
+    try:
+        # Get sessions from the session_docs collection
+        session_docs_col = chroma_client.get_or_create_collection("session_docs")
+        sessions = session_docs_col.get(where={"$and": [
+            {"teacher_id": teacher_id},
+            {"student_id": student_id},
+            {"course_id": course_id}
+        ]})
+        
+        results = []
+        if sessions and sessions.get("ids"):
+            for i, metadata in enumerate(sessions["metadatas"]):
+                # Extract the basic session info
+                session_data = {
+                    "id": metadata.get("session_id", ""),
+                    "title": f"{course_id} – Session {metadata.get('session_id', '')}",
+                    "duration": f"{int(metadata.get('duration_s', 0) / 60)} min",
+                    "date": metadata.get("session_date", "").split("T")[0] if "T" in metadata.get("session_date", "") else metadata.get("session_date", ""),
+                    "processed": True,
+                    "doc_id": sessions["ids"][i]
+                }
+                results.append(session_data)
+                
+        # Sort by session_id (numerically if possible)
+        def session_key(session):
+            try:
+                return int(session["id"])
+            except (ValueError, TypeError):
+                return session["id"]
+                
+        results.sort(key=session_key, reverse=True)
+        
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving sessions: {str(e)}")

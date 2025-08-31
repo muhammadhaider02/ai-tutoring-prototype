@@ -1,0 +1,53 @@
+# Core Web Framework
+fastapi==0.116.1
+uvicorn==0.35.0
+pydantic==2.11.7
+pydantic-core==2.33.2
+starlette==0.47.3
+
+# Environment and Configuration
+python-dotenv==1.1.1
+
+# AI and Language Models
+langchain==0.3.27
+langchain-core==0.3.74
+langchain-openai==0.3.32
+langchain-text-splitters==0.3.9
+openai==1.101.0
+tiktoken==0.11.0
+
+# Vector Database
+chromadb==1.0.20
+faiss-cpu==1.12.0
+
+# Audio/Video Processing
+moviepy==1.0.3
+pydub==0.25.1
+ffmpeg-python>=0.2.0
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+
+# Web Interaction
+requests==2.32.4
+playwright==1.55.0
+httpx==0.28.1
+anyio==4.9.0
+
+# API Interaction
+deepgram-sdk>=2.11.0
+
+# Data Management
+langsmith==0.4.17
+
+# HTTP
+python-multipart==0.0.20
+
+# Security
+bcrypt==4.3.0
+
+# Utilities
+python-dateutil==2.9.0.post0
+
+# Browser Automation (for PDF export)
+# Requires additional system dependencies:
+# playwright install

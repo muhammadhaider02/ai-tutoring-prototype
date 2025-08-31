@@ -1,0 +1,957 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root{
+  --bg: #0b1020;
+  --card: rgba(255,255,255,0.06);
+  --card-border: rgba(255,255,255,0.12);
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --primary-2: #22d3ee;
+  --blue: #3B82F6;
+  --shadow-lg: 0 20px 40px rgba(0,0,0,.45);
+  --radius: 16px;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-2xl: 1.5rem;
+  --fs-3xl: 1.875rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(11, 16, 32, 1) 100%), var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-2);
+}
+
+.home-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  padding: var(--sp-4);
+  padding-top: 2.5rem;
+}
+
+.role-selection-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 940px;
+  width: 100%;
+  margin-top: 3rem;
+}
+
+.sessions-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--sp-2);
+}
+
+.logo-icon {
+  background-color: var(--blue);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--sp-3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.logo-icon-svg {
+  stroke: black;
+}
+
+.logo-text {
+  color: var(--blue);
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 0.5rem;
+}
+
+.select-role-text {
+  color: #9CA3AF;
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-10);
+  margin-top: 0.75rem;
+  font-weight: 500;
+}
+
+.role-cards-container {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-8);
+  width: 100%;
+  margin-bottom: var(--sp-16);
+}
+
+.role-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-12) var(--sp-8);
+  flex: 1;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.role-icon {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(59, 130, 246, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-4);
+  transition: background-color 0.2s ease;
+}
+
+.role-card:hover .role-icon {
+  background-color: rgba(59, 130, 246, 0.25);
+}
+
+.role-title {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+  transition: color 0.2s ease;
+}
+
+.role-card:hover .role-title {
+  color: white;
+}
+
+.role-description {
+  color: var(--muted);
+  text-align: center;
+  font-size: var(--fs-md);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.auth-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  margin-top: auto;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-2);
+}
+
+.footer-link {
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--text);
+}
+
+.footer-divider {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.footer-copyright {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce){
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important;}
+}
+
+@media (max-width: 768px) {
+  .role-cards-container {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-6);
+    margin-bottom: var(--sp-10);
+  }
+  .role-card {
+    width: 100%;
+    padding: var(--sp-8) var(--sp-6);
+  }
+  .sessions-logo {
+    margin-bottom: var(--sp-2);
+  }
+  .select-role-text {
+    margin-bottom: var(--sp-6);
+  }
+  .logo-text {
+    font-size: var(--fs-2xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .role-icon {
+    width: 56px;
+    height: 56px;
+  }
+  .footer-links {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .footer-divider {
+    display: none;
+  }
+
+  
+}
+
+/* Student/Teacher selection page styles */
+.page {
+  min-height: 100vh;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 3rem; /* Added top padding to move content down */
+}
+
+.selection-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--sp-6);
+  margin-top: 1rem;
+}
+
+.selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-8);
+}
+
+.selection-title {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: white;
+}
+
+.back-button {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* Update the grid layout from 6 to 3 columns */
+.students-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Changed from repeat(6, 1fr) to 3 columns */
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-10);
+}
+
+.student-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  padding: var(--sp-6) var(--sp-3); /* Increased vertical padding from sp-4 to sp-6 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-lg);
+}
+
+.student-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.student-initial {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+}
+
+.student-name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: white;
+  text-align: center;
+}
+
+/* Responsive adjustments for student grid */
+@media (max-width: 1200px) {
+  .students-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .students-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .students-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .selection-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-4);
+  }
+  
+  .back-button {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 400px) {
+  .students-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dashboard styles */
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(11, 16, 32, 1) 100%), var(--bg);
+}
+
+.dashboard-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.user-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.user-role {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 1.5rem; /* Reduced padding from 2rem to 1.5rem */
+  max-width: 1400px; /* Increased from 1200px to 1400px for more width */
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* New styles for Teacher Dashboard */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem; /* Reduced gap from 1.5rem to 1rem to allow more card width */
+  margin-bottom: 2.5rem;
+  width: 100%; /* Ensure full width */
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 1.75rem 2rem; /* Increased padding for more substantial look */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  transition: all 0.2s ease; /* Add transition for interactive effect */
+  cursor: pointer; /* Add pointer cursor for interactive feel */
+}
+
+.stat-card:hover {
+  transform: translateY(-4px); /* Add hover lift effect */
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon.blue {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--blue);
+}
+
+.stat-icon.green {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.stat-icon.orange {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.section-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.action-button {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.students-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Exactly 3 cards per row */
+  gap: 1rem; /* Reduced gap from 1.5rem to 1rem to allow more card width */
+  margin-bottom: 2rem;
+  width: 100%; /* Ensure full width */
+}
+
+.student-dashboard-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 1.75rem; /* Increased padding from 1.5rem to 1.75rem */
+  position: relative;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  transition: all 0.2s ease;
+}
+
+.student-dashboard-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.status-pill {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pill.paid {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.status-pill.unpaid {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.student-dashboard-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.student-dashboard-course {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.student-dashboard-session {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Responsive styles for Teacher Dashboard */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .students-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 cards per row on medium screens */
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .students-dashboard-grid {
+    grid-template-columns: 1fr; /* Single column on smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Updated Recording Card Styles */
+.recording-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 1.25rem; /* Reduced from 1.5rem */
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  transition: all 0.2s ease;
+}
+
+.recording-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Changed from flex-start to center for better alignment */
+  margin-bottom: 1rem; /* Reduced from 1.25rem */
+}
+
+.recording-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.recording-icon-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: rgba(59, 130, 246, 0.15);
+  border-radius: 12px;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background-color: #ef4444;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.recording-title-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.recording-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.recording-metadata {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.metadata-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.recording-actions {
+  display: flex;
+  flex-direction: column; 
+  align-items: flex-end;
+}
+
+/* New style for single-line status and actions */
+.action-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Align to the right */
+  gap: 1rem;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none; /* Remove border when used as a button */
+  cursor: pointer; /* Make it interactive */
+  transition: all 0.2s ease; /* Add transition effect */
+}
+
+.status-badge.processed {
+  background-color: rgb(76, 196, 76);
+  color: white; /* Changed from #22c55e to white */
+}
+
+.status-badge.processed:hover {
+  background-color: rgba(34, 197, 94, 0.25);
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.recording-feedback {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 0.75rem; /* Reduced from 1rem */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* New style for inline feedback */
+.feedback-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feedback-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.feedback-text {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0; /* Remove any default margins */
+}
+
+/* Student Lectures Page Styles - Updated for avatar placement */
+.lectures-header-title-with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lectures-avatar {
+  margin-bottom: 0 !important; /* Override the default margin */
+  width: 56px !important;
+  height: 56px !important;
+  font-size: 1.5rem !important;
+}
+
+.lectures-title-smaller {
+  font-size: 2rem; /* Slightly smaller than the original 2.25rem */
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  margin-bottom: 4px; /* Add a small 4px gap between title and subtitle */
+  line-height: 1.1; /* Reduced from default line height to tighten spacing */
+}
+
+/* Add navbar-left for the new layout in TeacherCourseVideoPage */
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+/* Student Lectures Page Styles */
+.lectures-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.lectures-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.lectures-subtitle {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.2; /* Tighter line height for the subtitle */
+}
+
+.upload-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.upload-button:hover {
+  background-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+/* Remove the card-based header styles that are no longer needed */
+.lectures-header-card {
+  display: none;
+}
+
+.lectures-header-content {
+  display: none;
+}
+
+/* Additional responsive styles for the updated header */
+@media (max-width: 768px) {
+  .lectures-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  
+  .lectures-header-title-with-avatar {
+    width: 100%;
+  }
+  
+  .upload-button {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .lectures-header-title-with-avatar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .lectures-avatar {
+    margin-bottom: 0.5rem !important;
+  }
+}
+@media (max-width: 480px) {
+  .lectures-header-title-with-avatar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .lectures-avatar {
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+.action-pills {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-pill {
+  padding: 0.375rem 0.75rem;
+  background-color: rgb(59, 130, 246); /* Changed to solid color for brightness */
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.action-pill:hover {
+  background-color: rgb(37, 99, 235); /* Slightly darker on hover for depth */
+  transform: translateY(-2px); /* Lift effect */
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); /* Subtle shadow */
+}

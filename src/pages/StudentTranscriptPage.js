@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Sparkles, 
-  ArrowLeft, 
-  CheckSquare,
+  ArrowLeft,
+  FileText,
   Loader
 } from 'lucide-react';
 import { getSessionResult } from '../lib/services';
 
-function StudentQuizPage() {
+function StudentTranscriptPage() {
   const navigate = useNavigate();
   const { studentId, courseId } = useParams();
   const location = useLocation();
-  
+
   // Use Prof. Jaka Bavdek's name directly
   const studentName = 'Prof. Jaka Bavdek';
   const courseName = location.state?.courseName || 'Advanced Mathematics';
@@ -24,14 +24,12 @@ function StudentQuizPage() {
   const fixedStudentId = "1";
   const fixedCourseName = "Advanced Mathematics";
 
-  // State for quiz data and loading
-  const [quizData, setQuizData] = useState(null);
+  const [transcript, setTranscript] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch quiz data from database
   useEffect(() => {
-    const fetchQuizData = async () => {
+    const fetchTranscript = async () => {
       try {
         setLoading(true);
         const result = await getSessionResult({
@@ -40,19 +38,22 @@ function StudentQuizPage() {
           courseId: fixedCourseName,
           sessionId
         });
-        if (result.quiz && result.quiz.quiz && result.quiz.quiz.length > 0) {
-          setQuizData(result.quiz);
+        // The transcript is stored in result.transcript or result.summary
+        if (result && result.transcript) {
+          setTranscript(result.transcript);
+        } else if (result && result.summary) {
+          setTranscript(result.summary);
         } else {
-          setError('No quiz data available for this session.');
+          setError('No transcript available for this session.');
         }
       } catch (err) {
-        console.error('Error fetching quiz data:', err);
-        setError('Failed to load quiz data. Please try again later.');
+        console.error('Error fetching transcript:', err);
+        setError('Failed to load transcript. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
-    fetchQuizData();
+    fetchTranscript();
   }, [teacherId, fixedStudentId, fixedCourseName, sessionId]);
 
   // Handle back button click
@@ -91,16 +92,17 @@ function StudentQuizPage() {
 
       {/* Page Content */}
       <div className="dashboard-content">
-        {/* Quiz Title */}
+        {/* Transcript Title */}
         <div className="lectures-header">
           <div className="lectures-header-title">
-            <h1>Quiz: {sessionTitle}</h1>
+            <h1>
+              <FileText size={24} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              Summary: {sessionTitle}
+            </h1>
           </div>
         </div>
 
         <div className="summary-content">
-          <h3>Quiz Title: {sessionTitle}</h3>
-          
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
               <Loader size={36} className="spinning" style={{ color: 'var(--blue)' }} />
@@ -119,61 +121,18 @@ function StudentQuizPage() {
             </div>
           )}
 
-          {!loading && !error && quizData && quizData.quiz && (
-            <div className="quiz-container">
-              {quizData.quiz.map((question, index) => (
-                <div className="quiz-question" key={index}>
-                  <h4>Question {index + 1}:</h4>
-                  <p>{question.question}</p>
-                  <div className="quiz-options">
-                    {question.options.map((option, optIndex) => (
-                      <div className="quiz-option" key={optIndex}>
-                        <input 
-                          type="radio" 
-                          id={`q${index+1}-${String.fromCharCode(97 + optIndex)}`} 
-                          name={`q${index+1}`} 
-                        />
-                        <label htmlFor={`q${index+1}-${String.fromCharCode(97 + optIndex)}`}>
-                          {option}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Removed correct answer display */}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!loading && !error && quizData && quizData.quiz && quizData.quiz.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
-              <button 
-                className="action-button"
-                style={{ 
-                  background: 'rgb(59, 130, 246)',
-                  color: 'white',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  fontSize: '1rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgb(37, 99, 235)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(37, 99, 235, 0.3)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgb(59, 130, 246)';
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                onClick={() => alert('Quiz submitted')}
-              >
-                <CheckSquare size={20} />
-                <span>Submit Quiz</span>
-              </button>
+          {!loading && !error && transcript && (
+            <div className="transcript-container" style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 12,
+              padding: '1.5rem',
+              color: 'var(--text)',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.7,
+              fontSize: '1rem'
+            }}>
+              {transcript}
             </div>
           )}
         </div>
@@ -193,4 +152,4 @@ function StudentQuizPage() {
   );
 }
 
-export default StudentQuizPage;
+export default StudentTranscriptPage;

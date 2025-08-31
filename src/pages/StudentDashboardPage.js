@@ -105,7 +105,7 @@ function StudentDashboardPage() {
           <div className="section-actions">
             <button className="action-button">
               <Calendar size={16} />
-              <span>Schedule Session</span>
+              <span>Scheduled Session</span>
             </button>
             <button className="action-button">
               <Settings size={16} />

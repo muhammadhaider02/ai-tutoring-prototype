@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Sparkles, 
   ArrowLeft, 
-  BarChart2
+  BarChart2,
+  Loader
 } from 'lucide-react';
+import { getSessionResult } from '../lib/services';
 
 function StudentFeedbackPage() {
   const navigate = useNavigate();
@@ -14,7 +16,82 @@ function StudentFeedbackPage() {
   // Use Prof. Jaka Bavdek's name directly
   const studentName = 'Prof. Jaka Bavdek';
   const courseName = location.state?.courseName || 'Advanced Mathematics';
-  const sessionTitle = 'Introduction to Calculus – Session 1';
+  const sessionId = location.state?.sessionId || '1';
+  const sessionTitle = `${courseName} – Session ${sessionId}`;
+
+  // Use fixed values for teacherId and studentId to match backend/test data, but dynamic sessionId
+  const teacherId = "jaka";
+  const fixedStudentId = "1";
+  const fixedCourseName = "Advanced Mathematics";
+
+  const [feedback, setFeedback] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        setLoading(true);
+        const result = await getSessionResult({
+          teacherId,
+          studentId: fixedStudentId,
+          courseId: fixedCourseName,
+          sessionId
+        });
+        if (result.feedback) {
+          setFeedback(result.feedback);
+        } else {
+          setError('No feedback available for this session.');
+        }
+      } catch (err) {
+        console.error('Error fetching feedback:', err);
+        setError('Failed to load feedback. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFeedback();
+  }, [teacherId, fixedStudentId, fixedCourseName, sessionId]);
+
+  // Helper functions to extract strengths, weaknesses, and comments
+  const getStrengths = () => {
+    if (!feedback || !feedback.llm_eval) return [];
+    try {
+      const evalData = JSON.parse(feedback.llm_eval);
+      if (evalData.concept_mastery) {
+        return evalData.concept_mastery
+          .filter(concept => concept.status === "understood" || concept.status === "partial")
+          .map(concept => concept.concept);
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  const getWeaknesses = () => {
+    if (!feedback || !feedback.llm_eval) return [];
+    try {
+      const evalData = JSON.parse(feedback.llm_eval);
+      if (evalData.misconceptions) {
+        return evalData.misconceptions;
+      } else if (evalData.concept_mastery) {
+        return evalData.concept_mastery
+          .filter(concept => concept.status === "not understood")
+          .map(concept => concept.concept);
+      } else if (evalData.next_focus) {
+        return evalData.next_focus;
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  const getInstructorComments = () => {
+    if (!feedback || !feedback.llm_eval) return "";
+    try {
+      const evalData = JSON.parse(feedback.llm_eval);
+      return evalData.progress || "";
+    } catch (e) {}
+    return "";
+  };
 
   // Handle back button click
   const handleBackClick = () => {
@@ -59,66 +136,88 @@ function StudentFeedbackPage() {
           </div>
         </div>
 
-        {/* Progress Evaluation Card */}
-        <div className="info-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div className="progress-header">
-            <div className="card-header">
-              <div className="icon-container" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
-                <BarChart2 size={18} />
-              </div>
-              <div>
-                <h3 style={{ margin: '0', fontSize: '1.25rem' }}>Progress Evaluation</h3>
-                <p style={{ margin: '0', fontSize: '0.875rem', color: 'var(--muted)' }}>Improvement from last session</p>
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+            <Loader size={36} className="spinning" style={{ color: 'var(--blue)' }} />
+          </div>
+        )}
+
+        {error && !loading && (
+          <div style={{ 
+            padding: '1.5rem', 
+            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+            borderRadius: '8px',
+            color: '#ef4444',
+            marginTop: '1rem' 
+          }}>
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && feedback && (
+          <div className="info-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div className="progress-header">
+              <div className="card-header">
+                <div className="icon-container" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
+                  <BarChart2 size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: '0', fontSize: '1.25rem' }}>Progress Evaluation</h3>
+                  <p style={{ margin: '0', fontSize: '0.875rem', color: 'var(--muted)' }}>Improvement from last session</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Strengths */}
-          <div style={{ marginBottom: '0.5rem', padding: '1rem' }}>
-            <h4 className="section-heading">Strengths Observed:</h4>
-            <div className="tag-container">
-              <span className="tag green">Conceptual Understanding</span>
-              <span className="tag green">Problem Solving</span>
-              <span className="tag green">Critical Thinking</span>
+            {/* Strengths */}
+            <div style={{ marginBottom: '0.5rem', padding: '1rem' }}>
+              <h4 className="section-heading">Strengths Observed:</h4>
+              <div className="tag-container">
+                {getStrengths().length > 0 ? (
+                  getStrengths().map((strength, idx) => (
+                    <span className="tag green" key={idx}>{strength}</span>
+                  ))
+                ) : (
+                  <span className="tag green">No strengths data available</span>
+                )}
+              </div>
+              {/* Optionally, you can add a summary sentence here if available */}
+            </div>
+
+            {/* Areas for Focus */}
+            <div style={{ padding: '1rem', marginBottom: '0.5rem' }}>
+              <h4 className="section-heading">Areas for Focus:</h4>
+              <div className="tag-container">
+                {getWeaknesses().length > 0 ? (
+                  getWeaknesses().map((weakness, idx) => (
+                    <span className="tag red" key={idx}>{weakness}</span>
+                  ))
+                ) : (
+                  <span className="tag red">No areas for focus identified</span>
+                )}
+              </div>
             </div>
             
-            <p style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-              Your understanding of derivative concepts is excellent. You demonstrated strong 
-              problem-solving skills when working through complex applications, particularly 
-              with the power rule and chain rule. Your ability to connect abstract concepts 
-              with real-world applications shows a deep level of conceptual understanding.
-            </p>
-          </div>
-
-          {/* Areas for Focus */}
-          <div style={{ padding: '1rem', marginBottom: '0.5rem' }}>
-            <h4 className="section-heading">Areas for Focus:</h4>
-            <div className="tag-container">
-              <span className="tag red">Complex Applications</span>
-              <span className="tag red">Theoretical Foundations</span>
+            {/* Instructor Comments */}
+            <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
+              <h4 className="section-heading">Instructor Comments:</h4>
+              <p>
+                {getInstructorComments() || "No instructor comments available."}
+              </p>
             </div>
-            
-            <p style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-              While your application of basic derivatives is strong, consider working on more 
-              complex applications involving product and quotient rules. Additionally, strengthening
-              your understanding of theoretical foundations would help you tackle more advanced 
-              problems in the future. I recommend reviewing the limit definition of derivatives 
-              and practicing problems that require this fundamental understanding.
-            </p>
           </div>
-          
-          {/* Instructor Comments */}
-          <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
-            <h4 className="section-heading">Instructor Comments:</h4>
-            <p>
-              You've made excellent progress since our last session. Your enthusiasm for the subject 
-              is evident, and you're asking thoughtful questions that demonstrate your engagement. 
-              For our next session, I recommend reviewing the practice problems I've assigned and 
-              coming prepared with questions on any areas you find challenging.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
+      <style>
+        {`
+          .spinning {
+            animation: spin 1.5s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 }

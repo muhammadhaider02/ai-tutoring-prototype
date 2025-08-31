@@ -7,7 +7,7 @@ function TeacherDashboardPage() {
   const { teacherId } = useParams();
 
   // Use this to get teacher name from ID or API call in a real app
-  const teacherName = teacherId === 'jaka' ? 'Jaka Bavdek' : 'Teacher';
+  const teacherName = teacherId === 'jaka' ? 'Prof. Jaka Bavdek' : 'Teacher';
   const teacherInitial = teacherName.charAt(0);
 
   // Mock student data

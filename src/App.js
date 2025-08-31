@@ -11,6 +11,7 @@ import QuizPage from './pages/QuizPage';
 import StudentCourseVideosPage from './pages/StudentCourseVideosPage';
 import StudentQuizPage from './pages/StudentQuizPage';
 import StudentFeedbackPage from './pages/StudentFeedbackPage';
+import StudentTranscriptPage from './pages/StudentTranscriptPage';
 import './styles/styles.css';
 import './styles/styles-ai-summary.css';
 import './styles/styles-quiz.css';
@@ -44,6 +45,9 @@ function App() {
           
           {/* Student feedback page */}
           <Route path="/student/:studentId/course/:courseId/feedback" element={<StudentFeedbackPage />} />
+          
+          {/* Student transcript page */}
+          <Route path="/student/:studentId/course/:courseId/transcript" element={<StudentTranscriptPage />} />
         </Routes>
       </div>
     </Router>

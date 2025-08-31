@@ -11,8 +11,6 @@ import QuizPage from './pages/QuizPage';
 import StudentCourseVideosPage from './pages/StudentCourseVideosPage';
 import StudentQuizPage from './pages/StudentQuizPage';
 import StudentFeedbackPage from './pages/StudentFeedbackPage';
-
-// Import styles
 import './styles/styles.css';
 import './styles/styles-ai-summary.css';
 import './styles/styles-quiz.css';

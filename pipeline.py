@@ -19,6 +19,7 @@ from requests.adapters import HTTPAdapter
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -41,6 +42,15 @@ except Exception as e:
 load_dotenv()
 
 app = FastAPI()
+
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 # .env
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
@@ -1553,7 +1563,12 @@ class TutorProfileRequest(BaseModel):
 # Add tutor profile endpoints
 @app.put("/tutor/profile")
 def update_tutor_profile(req: TutorProfileRequest):
-    """Update a tutor's profile with Calendly URL"""
+    """
+    Update a tutor's profile with Calendly URL.
+    
+    This endpoint stores the Calendly URL for a specific teacher, which can be used
+    for scheduling tutoring sessions.
+    """
     tutor_profiles_col = chroma_client.get_or_create_collection("tutor_profiles")
     
     # Generate tutor ID
@@ -1578,7 +1593,11 @@ def update_tutor_profile(req: TutorProfileRequest):
 
 @app.get("/tutor/profile")
 def get_tutor_profile(teacher_id: str):
-    """Get a tutor's profile with Calendly URL"""
+    """
+    Get a tutor's profile with Calendly URL.
+    
+    Returns the Calendly URL for the specified teacher if it exists, or null if no profile is found.
+    """
     tutor_profiles_col = chroma_client.get_or_create_collection("tutor_profiles")
     
     # Generate tutor ID
@@ -1812,14 +1831,25 @@ class EditFeedbackRequest(BaseModel):
     insights: Dict[str, Any]
 
 # Add the three tutor edit endpoints
-@app.put("/sessions/{student_id}/{course_id}/{session_id}/summary")
+@app.put("/sessions/{student_id}/{course_id}/{session_id}/summary", 
+         responses={
+             200: {"description": "Summary updated successfully", 
+                   "content": {"application/json": {"example": {"ok": True, "version": 2}}}},
+             404: {"description": "Summary not found", 
+                   "content": {"application/json": {"example": {"error": "Summary not found"}}}}
+         })
 def edit_session_summary(
     student_id: str,
     course_id: str,
     session_id: str,
     req: EditSummaryRequest
 ):
-    """Update AI-generated summary with tutor edits"""
+    """
+    Update AI-generated session summary with tutor edits.
+    
+    This endpoint allows tutors to modify the AI-generated summary of a tutoring session.
+    The original summary is generated automatically from the session transcript.
+    """
     summaries_col = chroma_client.get_or_create_collection("session_summaries")
     
     # Look up the existing document ID instead of hardcoding teacher_id
@@ -1918,7 +1948,7 @@ def edit_session_feedback(
     
 # Run
 if __name__ == "__main__":
-    file_path = "Recording 1.mp4"
+    file_path = "Recording 3.mp4"
     processor = MediaProcessor(api_url=DEEPGRAM_API_URL, api_key=DEEPGRAM_API_KEY)
     
     duration = processor._duration_seconds(file_path)
@@ -1932,7 +1962,7 @@ if __name__ == "__main__":
         "teacher_id": "Prof. Jaka Bavdek",
         "student_id": "Amna Ahmad",
         "course_id": "Advanced Mathematics",
-        "session_id": "1",
+        "session_id": "3",
         "session_date": datetime.now().isoformat(),
         "duration_s": duration
     }

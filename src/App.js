@@ -5,7 +5,6 @@ import TeacherListPage from './pages/TeacherListPage';
 import StudentListPage from './pages/StudentListPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
-<<<<<<< HEAD
 import TeacherCourseVideoPage from './pages/TeacherCourseVideoPage';
 import AISummaryPage from './pages/AISummaryPage';
 import QuizPage from './pages/QuizPage';
@@ -17,9 +16,6 @@ import StudentFeedbackPage from './pages/StudentFeedbackPage';
 import './styles/styles.css';
 import './styles/styles-ai-summary.css';
 import './styles/styles-quiz.css';
-=======
-import StudentLecturesPage from './pages/StudentLecturesPage';
->>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
 
 function App() {
   return (
@@ -35,7 +31,6 @@ function App() {
           <Route path="/teacher-dashboard/:teacherId" element={<TeacherDashboardPage />} />
           <Route path="/teacher/:teacherId" element={<TeacherDashboardPage />} />
           
-<<<<<<< HEAD
           {/* Teacher course video page */}
           <Route path="/teacher/:teacherId/student/:studentId" element={<TeacherCourseVideoPage />} />
           
@@ -51,10 +46,6 @@ function App() {
           
           {/* Student feedback page */}
           <Route path="/student/:studentId/course/:courseId/feedback" element={<StudentFeedbackPage />} />
-=======
-          {/* Student lectures page */}
-          <Route path="/teacher/:teacherId/student/:studentId" element={<StudentLecturesPage />} />
->>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
         </Routes>
       </div>
     </Router>

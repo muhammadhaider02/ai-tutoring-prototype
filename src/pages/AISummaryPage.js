@@ -151,21 +151,32 @@ function AISummaryPage() {
 
         <div className="summary-content">
           <h3>Session Overview:</h3>
-          <p>Fundamental concepts of limits and derivatives.</p>
+          <p>The session focused on solving quadratic equations in vertex form and practicing grammar questions relevant to standardized tests.</p>
           
           <h3>Key Topics Covered:</h3>
           <ul>
-            <li>Limits</li>
-            <li>Derivatives as rates of change</li>
-            <li>Power rule</li>
-            <li>Applications</li>
+            <li>Vertex form of a parabola</li>
+            <li>Expanding and converting quadratic equations</li>
+            <li>FOIL method for binomials</li>
+            <li>Grammar: verb tense and punctuation</li>
           </ul>
           
           <h3>Student Performance:</h3>
-          <p>Amna showed strong conceptual understanding, especially applying power rule.</p>
+          <p>The student demonstrated some initial confusion with the vertex form but quickly grasped the concept after explanation. They answered grammar questions accurately and applied reasoning to select correct answers.</p>
           
           <h3>Areas of Excellence:</h3>
-          <p>Quick grasp of limit concepts.</p>
+          <ul>
+            <li>Rapid understanding of new algebraic forms</li>
+            <li>Strong reasoning in grammar question selection</li>
+          </ul>
+          
+          <h3>Quick Summary:</h3>
+          <ul>
+            <li>Learned how to write a quadratic equation in vertex form using given vertex coordinates.</li>
+            <li>Practiced expanding vertex form to standard form using the FOIL method.</li>
+            <li>Reviewed the importance of sign changes in vertex form parameters.</li>
+            <li>Applied knowledge of verb tense and punctuation to grammar questions.</li>
+          </ul>
         </div>
 
         {/* Two-column cards layout */}

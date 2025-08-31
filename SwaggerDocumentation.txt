@@ -5,11 +5,74 @@ info:
   description: Comprehensive API documentation for the AI Tutoring Prototype backend.
 
 components:
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-API-Key
+  schemas:
+    CreateShareRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+        course_id:
+          type: string
+        session_id:
+          type: string
+        scope:
+          type: array
+          items:
+            type: string
+            enum: [summary, quiz, feedback]
+        ttl_minutes:
+          type: integer
+          default: 43200
+      required:
+        - student_id
+        - course_id
+        - session_id
+    RevokeShareRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+        course_id:
+          type: string
+        session_id:
+          type: string
+      required:
+        - student_id
+        - course_id
+        - session_id
+    TutorProfileRequest:
+      type: object
+      properties:
+        teacher_id:
+          type: string
+        calendly_url:
+          type: string
+      required:
+        - teacher_id
+        - calendly_url
+    EditSummaryRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+    EditQuizRequest:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            type: object
+      required:
+        - questions
+    EditFeedbackRequest:
+      type: object
+      properties:
+        insights:
+          type: object
+      required:
+        - insights
 
 paths:
   /share:
@@ -21,8 +84,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateShareRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Share URL created
@@ -60,8 +121,6 @@ paths:
           required: true
           schema:
             type: string
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Shared content
@@ -97,8 +156,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RevokeShareRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Share revoked
@@ -149,12 +206,14 @@ paths:
           required: true
           schema:
             type: string
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: PDF or HTML export
           content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
             application/json:
               schema:
                 type: object
@@ -197,8 +256,6 @@ paths:
           required: false
           schema:
             type: boolean
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Metadata updated
@@ -223,8 +280,6 @@ paths:
           required: true
           schema:
             type: string
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: List of shared sessions
@@ -237,9 +292,12 @@ paths:
               examples:
                 sessions:
                   value:
-                    - session_id: "1"
-                      course_id: "SAT Practice"
-                      shared_with: ["Amna"]
+                    - id: "teacher:student:course:session"
+                      metadata:
+                        session_id: "1"
+                        course_id: "SAT Practice"
+                        shared_with: "[\"Amna\"]"
+                      text_sample: "Beginning of transcript..."
 
   /tutor/profile:
     put:
@@ -250,8 +308,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/TutorProfileRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Profile updated
@@ -287,8 +343,6 @@ paths:
           required: true
           schema:
             type: string
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Tutor profile
@@ -341,8 +395,6 @@ paths:
           required: true
           schema:
             type: string
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Concept comparison
@@ -368,7 +420,7 @@ paths:
                   value:
                     session_1: [ { name: "Loops", mentions: 7, examples: 2 } ]
                     session_2: [ { name: "Loops", mentions: 5, examples: 1 } ]
-                    delta: [ { name: "Loops", delta_mentions: -2 } ]
+                    delta: [ { name: "Loops", delta_mentions: -2, delta_examples: -1 } ]
 
   /sessions/{student_id}/{course_id}/{session_id}/summary:
     put:
@@ -395,8 +447,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/EditSummaryRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Summary updated
@@ -453,8 +503,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/EditQuizRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Quiz updated
@@ -511,8 +559,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/EditFeedbackRequest'
-      security:
-        - ApiKeyAuth: []
       responses:
         '200':
           description: Feedback updated
@@ -543,52 +589,6 @@ paths:
                 not_found:
                   value:
                     error: "Feedback not found"
-
-  schemas:
-    CreateShareRequest:
-      type: object
-      properties:
-        student_id:
-          type: string
-        course_id:
-          type: string
-        session_id:
-          type: string
-        scope:
-          type: array
-          items:
-            type: string
-            enum: [summary, quiz, feedback]
-        ttl_minutes:
-          type: integer
-          default: 43200
-      required:
-        - student_id
-        - course_id
-        - session_id
-        - scope
-    RevokeShareRequest:
-      type: object
-      properties:
-        student_id:
-          type: string
-        course_id:
-          type: string
-        session_id:
-          type: string
-      required:
-        - student_id
-        - course_id
-        - session_id
-    TutorProfileRequest:
-      type: object
-      properties:
-        teacher_id:
-          type: string
-        calendly_url:
-          type: string
-      required:
-        - teacher_id
         - calendly_url
     EditSummaryRequest:
       type: object

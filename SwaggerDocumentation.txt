@@ -225,80 +225,6 @@ paths:
                   value:
                     html: "<html>...Session Report...</html>"
 
-  /sessions/meta:
-    patch:
-      summary: Update session metadata
-      parameters:
-        - name: student_id
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: course_id
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: session_id
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: shared_with
-          in: query
-          required: false
-          schema:
-            type: array
-            items:
-              type: string
-        - name: paid
-          in: query
-          required: false
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: Metadata updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-              examples:
-                updated:
-                  value:
-                    ok: true
-
-  /sessions/shared:
-    get:
-      summary: Get sessions shared with a specific student
-      parameters:
-        - name: student_id
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of shared sessions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-              examples:
-                sessions:
-                  value:
-                    - id: "teacher:student:course:session"
-                      metadata:
-                        session_id: "1"
-                        course_id: "SAT Practice"
-                        shared_with: "[\"Amna\"]"
-                      text_sample: "Beginning of transcript..."
-
   /tutor/profile:
     put:
       summary: Update a tutor's profile with Calendly URL
@@ -356,7 +282,7 @@ paths:
               examples:
                 profile:
                   value:
-                    calendly_url: "https://calendly.com/tutor/jaka"
+                    calendly_url: "https://cal.com/jakabavdek"
         '404':
           description: Tutor profile not found
           content:
@@ -371,9 +297,9 @@ paths:
                   value:
                     calendly_url: null
 
-  /progress/concepts:
-    get:
-      summary: Compare concept coverage between two sessions
+  /sessions/meta:
+    patch:
+      summary: Update session metadata
       parameters:
         - name: student_id
           in: query
@@ -382,74 +308,27 @@ paths:
             type: string
         - name: course_id
           in: query
-          required: true
-          schema:
-            type: string
-        - name: session_id_1
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: session_id_2
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Concept comparison
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  session_1:
-                    type: array
-                    items:
-                      type: object
-                  session_2:
-                    type: array
-                    items:
-                      type: object
-                  delta:
-                    type: array
-                    items:
-                      type: object
-              examples:
-                comparison:
-                  value:
-                    session_1: [ { name: "Loops", mentions: 7, examples: 2 } ]
-                    session_2: [ { name: "Loops", mentions: 5, examples: 1 } ]
-                    delta: [ { name: "Loops", delta_mentions: -2, delta_examples: -1 } ]
-
-  /sessions/{student_id}/{course_id}/{session_id}/summary:
-    put:
-      summary: Update AI-generated summary with tutor edits
-      parameters:
-        - name: student_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: course_id
-          in: path
           required: true
           schema:
             type: string
         - name: session_id
-          in: path
+          in: query
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EditSummaryRequest'
+        - name: shared_with
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: paid
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         '200':
-          description: Summary updated
+          description: Metadata updated
           content:
             application/json:
               schema:
@@ -457,37 +336,158 @@ paths:
                 properties:
                   ok:
                     type: boolean
-                  version:
-                    type: integer
               examples:
                 updated:
                   value:
                     ok: true
-                    version: 2
-        '404':
-          description: Summary not found
+
+  /sessions/shared:
+    get:
+      summary: Get sessions shared with a specific student
+      parameters:
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of shared sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+              examples:
+                sessions:
+                  value:
+                    - id: "teacher:student:course:session"
+                      metadata:
+                        session_id: "1"
+                        course_id: "SAT Practice"
+                        shared_with: "[\"Amna\"]"
+                      text_sample: "Beginning of transcript..."
+
+  /sessions/list:
+    get:
+      summary: Get all sessions for a teacher/student/course combination
+      parameters:
+        - name: teacher_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    duration:
+                      type: string
+                    date:
+                      type: string
+                    processed:
+                      type: boolean
+                    doc_id:
+                      type: string
+              examples:
+                sessions:
+                  value:
+                    - id: "1"
+                      title: "Advanced Mathematics – Session 1"
+                      duration: "32 min"
+                      date: "2025-08-31"
+                      processed: true
+                      doc_id: "jaka:1:Advanced Mathematics:1"
+
+  /sessions/result:
+    get:
+      summary: Get the processed results for a session
+      parameters:
+        - name: teacher_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session results (summary, quiz, feedback)
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
+                  summary:
                     type: string
+                  quiz:
+                    type: object
+                  feedback:
+                    type: object
               examples:
-                not_found:
+                result:
                   value:
-                    error: "Summary not found"
-
-  /sessions/{student_id}/{course_id}/{session_id}/quiz:
-    put:
-      summary: Update AI-generated quiz with tutor edits
-      parameters:
-        - name: student_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: course_id
+                    summary: "Session summary text..."
+                    quiz: { quiz: [ { question: "...", options: ["A) ...", "B) ...", "C) ...", "D) ..."], correct_answer: "B) ..." } ] }
+                    feedback: { llm_eval: "{...}", topic_drift: { ... } }
+        - calendly_url
+    EditSummaryRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+    EditQuizRequest:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            type: object
+      required:
+        - questions
+    EditFeedbackRequest:
+      type: object
+      properties:
+        insights:
+          type: object
+      required:
+        - insights
           in: path
           required: true
           schema:

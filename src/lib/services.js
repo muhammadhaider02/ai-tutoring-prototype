@@ -74,3 +74,51 @@ export const editFeedback = ({ studentId, courseId, sessionId, insights }) =>
   api.put(`/sessions/${encodeURIComponent(studentId)}/${encodeURIComponent(courseId)}/${encodeURIComponent(sessionId)}/feedback`,
     { insights }
   ).then(r => r.data);
+
+// ---- Video Upload ----
+export const uploadSessionVideo = async (file, metadata) => {
+  // Create form data with file and metadata
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('teacher_id', metadata.teacherId);
+  formData.append('student_id', metadata.studentId);
+  formData.append('course_id', metadata.courseId);
+  formData.append('session_id', metadata.sessionId);
+  formData.append('session_date', metadata.sessionDate || new Date().toISOString());
+
+  return api.post("/upload", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }).then(r => r.data);
+};
+
+export const getProcessingStatus = (metadata) =>
+  api.get("/processing/status", {
+    params: {
+      teacher_id: metadata.teacherId,
+      student_id: metadata.studentId,
+      course_id: metadata.courseId,
+      session_id: metadata.sessionId
+    }
+  }).then(r => r.data);
+
+export const getSessionResult = (metadata) =>
+  api.get("/sessions/result", {
+    params: {
+      teacher_id: metadata.teacherId,
+      student_id: metadata.studentId,
+      course_id: metadata.courseId,
+      session_id: metadata.sessionId
+    }
+  }).then(r => r.data);
+
+// ---- Sessions listing ----
+export const getSessionsList = ({ teacherId, studentId, courseId }) =>
+  api.get("/sessions/list", {
+    params: {
+      teacher_id: teacherId,
+      student_id: studentId,
+      course_id: courseId
+    }
+  }).then(r => r.data);

@@ -1,0 +1,30 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Explicitly declare text files we want to always be normalized and converted to native line endings on checkout.
+*.js     text
+*.ts     text
+*.jsx    text
+*.tsx    text
+*.css    text
+*.scss   text
+*.html   text
+*.md     text
+*.json   text
+*.yml    text
+*.yaml   text
+*.sh     text eol=lf
+
+# Binary files
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.mp4    binary
+*.mp3    binary
+
+# Prevent linguist from classifying minified files as source
+*.min.js linguist-generated=true
+*.min.css linguist-generated=true

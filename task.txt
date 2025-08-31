@@ -1,0 +1,94 @@
+## Purpose and Expectations
+
+This is an **open‑ended, product‑focused build**. We want to see **end‑to‑end thinking** and the ability to ship a usable prototype in one week. Use the flow below as **guidance, not a checklist**. There is **no single correct solution**. We value:
+
+- Full‑stack implementation that works end‑to‑end
+- **LLM/agent engineering beyond a single prompt**
+- Clear prioritization (think like a product engineer; prototype > perfect depth)
+
+**De‑emphasis (don’t sink time here):**
+
+- Heavy frontend polish is not the focus
+- Non‑functional requirements (auth/security/roles) are not required
+- Keep **latency reasonable**, but no performance tuning needed
+
+We will provide **dummy data** (two short transcripts; optional short video files). You may also fabricate additional small datasets if helpful.
+
+---
+
+## Objective
+
+In one week, build a prototype web app that demonstrates the core Epistemy Sessions flow:
+
+> Upload a tutoring session → AI generates smart content (summary, feedback, quiz) → Tutor and student access it in a simple dashboard.
+> 
+
+---
+
+## Core Features (Must‑Haves)
+
+### 1) Session Intelligence Pipeline (AI Agent)
+
+Input: Video File (Transcript from the video) (use the samples provided).
+
+Pipeline should include:
+
+1. **Topic extraction** (subject + subtopics)
+2. **Progress evaluation** (compare to a previous session transcript)
+3. **Quiz/question generation** (3–5 progression‑aware practice questions)
+    
+    Requirements:
+    
+- Tutor can **edit** AI outputs before sharing
+- Export as **PDF** or provide a **shareable link**
+
+### 2) Tutor Dashboard MVP
+
+- Minimal login (mocked or simple session acceptable)
+- List of sessions
+- Open a session to view/edit AI outputs
+
+### 3) Student Vault MVP
+
+- Minimal login (mocked acceptable) or magic link
+- View sessions shared by the tutor
+- Access feedback and quizzes
+
+### 4) Booking & Payments (Simplified)
+
+- Tutor pastes **Calendly** link → show “Book Session” button
+- **Dummy payment**: a button or toggle to mark **paid/unpaid** (no real Stripe integration required)
+
+---
+
+## Stretch Features (Optional, to stand out)
+
+- **Landing Page Generator**: sessions.now/username with intro, photo, book button
+- **Mini‑Course Builder**: bundle past sessions/files into a product page
+- **Observability/Evaluation**: basic scoring or LLM‑as‑judge to assess agent output quality
+- **Cleaner UX**: if you can keep scope tight, a simple, intuitive interface is a plus
+
+---
+
+## Technical Requirements (Flexible)
+
+- Backend: **Python** (FastAPI/Flask) or **Node** (Express)
+- Frontend: **React** (Next.js optional)
+- Database: any simple option (**SQLite/Postgres/Mongo**)
+- AI: **OpenAI API** or any LLM you prefer
+
+Deliverables in repo:
+
+- Working code
+- `README.md` with architecture, trade‑offs, instructions to run locally, and a short note on evaluation/observability
+- Short demo video (≤ 3 minutes; Loom/YouTube link)
+
+---
+
+## Evaluation Criteria (0–5 each)
+
+1. **Core Functionality** – Does the pipeline and dashboard work end‑to‑end?
+2. **Agent Quality** – Is it beyond “summarize”? (topic extraction, progress logic, relevant questions)
+3. **Architecture & Code** – Clear structure; easy to follow/run
+4. **Prioritization & Ingenuity** – Sensible scope choices; thoughtful extras (observability, mini‑course, landing pages)
+5. **Demo & Clarity** – Can we understand and use it from the README + video?

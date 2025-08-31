@@ -1,6 +1,10 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+<<<<<<< HEAD
 import { Sparkles, LogOut, BookOpen, Clock, TrendingUp, Layers, Calendar, Settings } from 'lucide-react';
+=======
+import { Sparkles, LogOut } from 'lucide-react';
+>>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
 
 function StudentDashboardPage() {
   const navigate = useNavigate();
@@ -45,6 +49,7 @@ function StudentDashboardPage() {
       {/* Dashboard Content */}
       <div className="dashboard-content">
         <h1>Welcome, {studentName}</h1>
+<<<<<<< HEAD
         
         {/* Key Stats Section */}
         <div className="stats-grid">
@@ -161,6 +166,9 @@ function StudentDashboardPage() {
             <div className="student-dashboard-session">Next session: 1 week</div>
           </div>
         </div>
+=======
+        <p>Your student dashboard is under construction.</p>
+>>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
       </div>
     </div>
   );

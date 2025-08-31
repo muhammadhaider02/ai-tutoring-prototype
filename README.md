@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI Tutoring Prototype
 
 This project is a prototype web application that demonstrates the core flow of AI-enhanced tutoring sessions: Upload a tutoring session → AI generates smart content (summary, feedback, quiz) → Tutor and student access it in a simple dashboard.
@@ -36,6 +37,9 @@ This will:
 - Check for FFmpeg installation
 
 4. Create a `.env` file in the project root with the necessary API keys.
+=======
+# Haider-PlayX
+>>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
 
 ## How to Install FFmpeg on Windows
 
@@ -73,6 +77,7 @@ This will:
   ffmpeg -version
   ```
 - If you see version details, you're good.
+<<<<<<< HEAD
 
 ## Installing FFmpeg on macOS
 
@@ -149,3 +154,5 @@ LANGSMITH_PROJECT=your_langsmith_project
 # Security for sharing links
 SHARE_TOKEN_SECRET=some_random_string
 ```
+=======
+>>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783

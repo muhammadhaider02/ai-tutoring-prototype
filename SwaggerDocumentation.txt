@@ -1,0 +1,615 @@
+openapi: 3.0.0
+info:
+  title: AI Tutoring Prototype API
+  version: 1.0.0
+  description: Comprehensive API documentation for the AI Tutoring Prototype backend.
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+paths:
+  /share:
+    post:
+      summary: Create a shareable link for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Share URL created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  share_url:
+                    type: string
+              examples:
+                success:
+                  value:
+                    share_url: "http://localhost:8000/share/abc123token"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                invalid_scope:
+                  value:
+                    error: "Invalid scope. Must include at least one of: summary, quiz, feedback"
+
+  /share/{token}:
+    get:
+      summary: Get shared content using a token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Shared content
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                summary_and_quiz:
+                  value:
+                    summary: "• Key topics covered..."
+                    quiz: { quiz: [ { question: "...", options: ["A) ...", "B) ...", "C) ...", "D) ..."], correct_answer: "B) ..." } ] }
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                expired:
+                  value:
+                    error: "Invalid or expired token"
+
+  /share/revoke:
+    post:
+      summary: Revoke a shared token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeShareRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Share revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  revoked_count:
+                    type: integer
+              examples:
+                success:
+                  value:
+                    ok: true
+                    revoked_count: 1
+        '400':
+          description: No active shares found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                not_found:
+                  value:
+                    error: "No active shares found"
+
+  /export/pdf:
+    get:
+      summary: Export session summary, quiz, and feedback as PDF
+      parameters:
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: PDF or HTML export
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  html:
+                    type: string
+              examples:
+                html:
+                  value:
+                    html: "<html>...Session Report...</html>"
+
+  /sessions/meta:
+    patch:
+      summary: Update session metadata
+      parameters:
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: shared_with
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: paid
+          in: query
+          required: false
+          schema:
+            type: boolean
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Metadata updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+              examples:
+                updated:
+                  value:
+                    ok: true
+
+  /sessions/shared:
+    get:
+      summary: Get sessions shared with a specific student
+      parameters:
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: List of shared sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+              examples:
+                sessions:
+                  value:
+                    - session_id: "1"
+                      course_id: "SAT Practice"
+                      shared_with: ["Amna"]
+
+  /tutor/profile:
+    put:
+      summary: Update a tutor's profile with Calendly URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TutorProfileRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+              examples:
+                updated:
+                  value:
+                    ok: true
+        '500':
+          description: Failed to update profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                error:
+                  value:
+                    error: "Failed to update profile"
+    get:
+      summary: Get a tutor's profile with Calendly URL
+      parameters:
+        - name: teacher_id
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Tutor profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  calendly_url:
+                    type: string
+              examples:
+                profile:
+                  value:
+                    calendly_url: "https://calendly.com/tutor/jaka"
+        '404':
+          description: Tutor profile not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  calendly_url:
+                    type: string
+              examples:
+                not_found:
+                  value:
+                    calendly_url: null
+
+  /progress/concepts:
+    get:
+      summary: Compare concept coverage between two sessions
+      parameters:
+        - name: student_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: session_id_1
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: session_id_2
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Concept comparison
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_1:
+                    type: array
+                    items:
+                      type: object
+                  session_2:
+                    type: array
+                    items:
+                      type: object
+                  delta:
+                    type: array
+                    items:
+                      type: object
+              examples:
+                comparison:
+                  value:
+                    session_1: [ { name: "Loops", mentions: 7, examples: 2 } ]
+                    session_2: [ { name: "Loops", mentions: 5, examples: 1 } ]
+                    delta: [ { name: "Loops", delta_mentions: -2 } ]
+
+  /sessions/{student_id}/{course_id}/{session_id}/summary:
+    put:
+      summary: Update AI-generated summary with tutor edits
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditSummaryRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Summary updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  version:
+                    type: integer
+              examples:
+                updated:
+                  value:
+                    ok: true
+                    version: 2
+        '404':
+          description: Summary not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                not_found:
+                  value:
+                    error: "Summary not found"
+
+  /sessions/{student_id}/{course_id}/{session_id}/quiz:
+    put:
+      summary: Update AI-generated quiz with tutor edits
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditQuizRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Quiz updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  version:
+                    type: integer
+              examples:
+                updated:
+                  value:
+                    ok: true
+                    version: 2
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                not_found:
+                  value:
+                    error: "Quiz not found"
+
+  /sessions/{student_id}/{course_id}/{session_id}/feedback:
+    put:
+      summary: Update AI-generated feedback with tutor edits
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditFeedbackRequest'
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Feedback updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  version:
+                    type: integer
+              examples:
+                updated:
+                  value:
+                    ok: true
+                    version: 2
+        '404':
+          description: Feedback not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                not_found:
+                  value:
+                    error: "Feedback not found"
+
+  schemas:
+    CreateShareRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+        course_id:
+          type: string
+        session_id:
+          type: string
+        scope:
+          type: array
+          items:
+            type: string
+            enum: [summary, quiz, feedback]
+        ttl_minutes:
+          type: integer
+          default: 43200
+      required:
+        - student_id
+        - course_id
+        - session_id
+        - scope
+    RevokeShareRequest:
+      type: object
+      properties:
+        student_id:
+          type: string
+        course_id:
+          type: string
+        session_id:
+          type: string
+      required:
+        - student_id
+        - course_id
+        - session_id
+    TutorProfileRequest:
+      type: object
+      properties:
+        teacher_id:
+          type: string
+        calendly_url:
+          type: string
+      required:
+        - teacher_id
+        - calendly_url
+    EditSummaryRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+    EditQuizRequest:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            type: object
+      required:
+        - questions
+    EditFeedbackRequest:
+      type: object
+      properties:
+        insights:
+          type: object
+      required:
+        - insights

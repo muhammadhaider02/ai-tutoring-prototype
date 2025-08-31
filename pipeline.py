@@ -627,29 +627,44 @@ def run_summary_and_quiz(state: ChatState):
 
         # --- Summary generation with retries and fallback ---
         summary_prompt = f"""
-You are creating a **tutor-facing session summary** from a tutoring session transcript.
+You are writing a tutor-facing session summary in **structured Markdown**.
+Follow this **exact section order and headings**. Do not add extra sections.
 
-Goals:
-- Help the tutor quickly recall what was taught.
-- Emphasize the **main concepts explained**, **skills practiced**, and any **student difficulties**.
-- Provide insights the tutor can use to plan the **next session**.
+Session Overview:
+<one concise sentence describing what was taught overall>
+
+Key Topics Covered:
+- <topic 1 (short)>
+- <topic 2 (short)>
+- <topic 3 (short)>
+- <topic 4 (short)>
+(3–6 bullets total; keep to concept names only.)
+
+Student Performance:
+<1–2 sentences on the student's performance, be specific to the transcript (accuracy, strategies, errors, speed).>
+
+Areas of Excellence:
+- <strong point 1>
+- <strong point 2>
+(1–3 bullets max.)
+
+Quick Summary:
+- <concrete point 1>
+- <concrete point 2>
+- <concrete point 3>
+- <concrete point 4>
+- <concrete point 5>
+(EXACTLY 5 bullets; each actionable and specific.)
 
 Rules:
-- Return a **bullet list** of 5–8 points.
-- Each bullet should be **specific and actionable**, not generic.
-- Highlight:
-  • Key topics covered (e.g., "Quadratic Functions – Vertex Form")
-  • Misconceptions or errors the student made
-  • Strategies or examples the tutor used
-  • Progress indicators (what the student did well, where they improved)
-  • Suggested next steps or review needs
-- Avoid filler like "general discussion" or "they talked".
-- Write in **professional tutor notes style**.
+- Be specific to the transcript; avoid generic filler.
+- Keep total length under 180 words.
+- If any section truly has no evidence, write a single em dash: "—".
+- Output **only** the Markdown, no code fences.
 
 Transcript:
 {transcript_for_gen}
 """
-        
         async def call_summary_primary():
             return await general_llm.ainvoke([HumanMessage(content=summary_prompt)])
             
@@ -1855,7 +1870,7 @@ def edit_session_quiz(
     metadata = res["metadatas"][0].copy()
     metadata["version"] = metadata.get("version", 1) + 1
     metadata["is_edited"] = True
-    metadata["edited_at"] = datetime.now().isoformat()  # Changed from datetime.datetime.now()
+    metadata["edited_at"] = datetime.now().isoformat()
     
     quiz_str = json.dumps(req.questions, ensure_ascii=False)
     quizzes_col.upsert(
@@ -1914,10 +1929,10 @@ if __name__ == "__main__":
         "file_path": file_path,
         "transcript": transcript,
         "retrieved_context": None,
-        "teacher_id": "Jaka",
-        "student_id": "Amna",
-        "course_id": "SAT Practice",
-        "session_id": "4",
+        "teacher_id": "Prof. Jaka Bavdek",
+        "student_id": "Amna Ahmad",
+        "course_id": "Advanced Mathematics",
+        "session_id": "1",
         "session_date": datetime.now().isoformat(),
         "duration_s": duration
     }

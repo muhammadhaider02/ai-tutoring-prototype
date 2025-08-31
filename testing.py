@@ -1917,11 +1917,7 @@ if __name__ == "__main__":
         "teacher_id": "Jaka",
         "student_id": "Amna",
         "course_id": "SAT Practice",
-<<<<<<< HEAD
         "session_id": "1",
-=======
-        "session_id": "5",
->>>>>>> 23ae73393bf464f748c2cdd93d6b667c7aef2783
         "session_date": datetime.now().isoformat(),
         "duration_s": duration
     }
